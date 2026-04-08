@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iris Assets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-shell"></div>
+
+  <main class="app">
+    <button class="top-action" aria-label="Open menu">
+      <img src="assets/img_3.png" alt="menu icon" />
+    </button>
+
+    <section class="balance-card glass-card">
+      <div class="balance-bg"></div>
+      <div class="balance-mask"></div>
+      <div class="balance-content">
+        <p class="balance-label">Total Assets(USDT)</p>
+        <h1 id="totalAssets">0</h1>
+
+        <div class="action-row">
+          <button class="action-btn" type="button" id="depositBtn">
+            <img src="assets/img_4.png" alt="deposit icon" />
+            <span>Deposit</span>
+          </button>
+          <button class="action-btn" type="button" id="withdrawBtn">
+            <img src="assets/img_5.png" alt="withdraw icon" />
+            <span>Withdraw</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-title-wrap">
+      <div class="section-line"></div>
+      <h2 class="section-title">Level Upgrade</h2>
+      <div class="section-line"></div>
+    </section>
+
+    <section class="level-slider" aria-label="Level slider">
+      <button class="nav-hitbox nav-prev" id="prevLevel" aria-label="Previous level"></button>
+
+      <div class="level-card-wrap" id="levelSwipeArea">
+        <article class="level-card" id="levelCard">
+          <img class="level-card-bg" id="levelBg" src="assets/img_8.png" alt="level background" />
+          <div class="level-card-overlay"></div>
+          <div class="level-card-text">
+            <h3 id="levelName">L0</h3>
+            <p id="levelStatus"><i class='bx bxs-lock-alt'></i> Level Unlocked</p>
+          </div>
+          <img class="level-emblem" id="levelGem" src="assets/img_9.png" alt="level emblem" />
+        </article>
+      </div>
+
+      <button class="nav-hitbox nav-next" id="nextLevel" aria-label="Next level"></button>
+      <div class="slider-dots" id="sliderDots" aria-label="Level indicators"></div>
+    </section>
+
+    <section id="detailsArea"></section>
+  </main>
+
+  <nav class="bottom-nav">
+    <a href="#" class="nav-item">
+      <img src="assets/img_16.png" alt="home icon" />
+      <span>Home</span>
+    </a>
+    <a href="#" class="nav-item">
+      <img src="assets/img_17.png" alt="team icon" />
+      <span>Team</span>
+    </a>
+    <a href="#" class="nav-item nav-center active">
+      <img src="assets/img_18.png" alt="center icon" />
+    </a>
+    <a href="#" class="nav-item active-text">
+      <img src="assets/img_19.png" alt="assets icon" />
+      <span>Assets</span>
+    </a>
+    <a href="#" class="nav-item">
+      <img src="assets/img_20.png" alt="profile icon" />
+      <span>Profile</span>
+    </a>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>
