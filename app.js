@@ -79,7 +79,13 @@ const levelData = [
 
 const state = {
   currentLevel: 0,
-  totalAssets: 0
+  totalAssets: 0,
+  isTransitioning: false,
+  isDragging: false,
+  activePointerId: null,
+  dragStartX: 0,
+  dragCurrentX: 0,
+  dragOffsetX: 0
 };
 
 const totalAssetsElement = document.getElementById("totalAssets");
@@ -91,6 +97,12 @@ const detailsArea = document.getElementById("detailsArea");
 const sliderDots = document.getElementById("sliderDots");
 const levelCard = document.getElementById("levelCard");
 const swipeArea = document.getElementById("levelSwipeArea");
+const nextButton = document.getElementById("nextLevel");
+const prevButton = document.getElementById("prevLevel");
+
+function clampLevel(index) {
+  return Math.max(0, Math.min(index, levelData.length - 1));
+}
 
 function setAssetsValue(value) {
   state.totalAssets = value;
@@ -104,7 +116,7 @@ function createDots() {
     const dot = document.createElement("button");
     dot.type = "button";
     dot.setAttribute("aria-label", `Go to ${level.name}`);
-    dot.addEventListener("click", () => setLevel(index));
+    dot.addEventListener("click", () => setLevel(index, index > state.currentLevel ? 1 : -1));
     sliderDots.appendChild(dot);
   });
 }
@@ -142,19 +154,40 @@ function renderDots() {
   });
 }
 
+function updateNavState() {
+  prevButton.disabled = state.currentLevel === 0;
+  nextButton.disabled = state.currentLevel === levelData.length - 1;
+}
+
 function animateCard(direction = 1) {
+  const safeDirection = direction === 0 ? 0 : direction > 0 ? 1 : -1;
   levelCard.animate(
     [
-      { opacity: 0.84, transform: `translateX(${direction * 16}px) scale(0.988)` },
+      { opacity: 0.84, transform: `translateX(${safeDirection * 16}px) scale(0.988)` },
       { opacity: 1, transform: "translateX(0) scale(1)" }
     ],
     { duration: 240, easing: "ease-out" }
   );
 }
 
+function updateDragPosition(offsetX) {
+  levelCard.style.transform = `translateX(${offsetX}px)`;
+}
+
+function resetDragPosition(animated = true) {
+  levelCard.style.transition = animated ? "transform 180ms ease-out" : "none";
+  updateDragPosition(0);
+
+  window.setTimeout(() => {
+    levelCard.style.transition = "";
+  }, 220);
+}
+
 function setLevel(index, direction = 1) {
-  state.currentLevel = (index + levelData.length) % levelData.length;
-  const level = levelData[state.currentLevel];
+  const nextIndex = clampLevel(index);
+  const level = levelData[nextIndex];
+
+  state.currentLevel = nextIndex;
 
   levelName.className = level.titleClass ? level.titleClass : "";
   levelName.textContent = level.name;
@@ -169,29 +202,117 @@ function setLevel(index, direction = 1) {
 
   renderDetails(level);
   renderDots();
+  updateNavState();
+  resetDragPosition(false);
   animateCard(direction);
 }
 
+function withTransitionLock(callback) {
+  if (state.isTransitioning) return;
+
+  state.isTransitioning = true;
+  callback();
+
+  window.setTimeout(() => {
+    state.isTransitioning = false;
+  }, 280);
+}
+
 function nextLevel() {
-  setLevel(state.currentLevel + 1, 1);
+  if (state.currentLevel >= levelData.length - 1) {
+    resetDragPosition(true);
+    return;
+  }
+
+  withTransitionLock(() => setLevel(state.currentLevel + 1, 1));
 }
 
 function prevLevel() {
-  setLevel(state.currentLevel - 1, -1);
+  if (state.currentLevel <= 0) {
+    resetDragPosition(true);
+    return;
+  }
+
+  withTransitionLock(() => setLevel(state.currentLevel - 1, -1));
 }
 
-let touchStartX = 0;
-let touchEndX = 0;
-
-function handleSwipe() {
-  const distance = touchEndX - touchStartX;
-  if (Math.abs(distance) < 35) return;
-  if (distance < 0) nextLevel();
-  else prevLevel();
+function canStartDrag(target) {
+  return !target.closest("button, a");
 }
 
-document.getElementById("nextLevel").addEventListener("click", nextLevel);
-document.getElementById("prevLevel").addEventListener("click", prevLevel);
+function beginDrag(pointerId, clientX) {
+  if (state.isTransitioning || state.isDragging) return;
+
+  state.isDragging = true;
+  state.activePointerId = pointerId;
+  state.dragStartX = clientX;
+  state.dragCurrentX = clientX;
+  state.dragOffsetX = 0;
+  levelCard.style.transition = "none";
+  swipeArea.classList.add("dragging");
+}
+
+function moveDrag(pointerId, clientX) {
+  if (!state.isDragging || state.activePointerId !== pointerId) return;
+
+  state.dragCurrentX = clientX;
+  const rawOffset = clientX - state.dragStartX;
+  const atFirst = state.currentLevel === 0 && rawOffset > 0;
+  const atLast = state.currentLevel === levelData.length - 1 && rawOffset < 0;
+  const resistance = atFirst || atLast ? 0.24 : 1;
+
+  state.dragOffsetX = rawOffset * resistance;
+  updateDragPosition(state.dragOffsetX);
+}
+
+function endDrag(pointerId) {
+  if (!state.isDragging || state.activePointerId !== pointerId) return;
+
+  state.isDragging = false;
+  state.activePointerId = null;
+  swipeArea.classList.remove("dragging");
+
+  const threshold = Math.min(70, swipeArea.clientWidth * 0.18);
+  const distance = state.dragOffsetX;
+
+  if (Math.abs(distance) >= threshold) {
+    if (distance < 0) {
+      nextLevel();
+    } else {
+      prevLevel();
+    }
+    return;
+  }
+
+  resetDragPosition(true);
+}
+
+swipeArea.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "mouse" && event.button !== 0) return;
+  if (!canStartDrag(event.target)) return;
+
+  beginDrag(event.pointerId, event.clientX);
+  swipeArea.setPointerCapture(event.pointerId);
+});
+
+swipeArea.addEventListener("pointermove", (event) => {
+  moveDrag(event.pointerId, event.clientX);
+});
+
+swipeArea.addEventListener("pointerup", (event) => {
+  endDrag(event.pointerId);
+});
+
+swipeArea.addEventListener("pointercancel", (event) => {
+  endDrag(event.pointerId);
+});
+
+swipeArea.addEventListener("lostpointercapture", (event) => {
+  endDrag(event.pointerId);
+});
+
+nextButton.addEventListener("click", nextLevel);
+prevButton.addEventListener("click", prevLevel);
 
 document.getElementById("depositBtn").addEventListener("click", () => {
   console.log("Deposit button clicked");
@@ -200,23 +321,6 @@ document.getElementById("depositBtn").addEventListener("click", () => {
 document.getElementById("withdrawBtn").addEventListener("click", () => {
   console.log("Withdraw button clicked");
 });
-
-swipeArea.addEventListener(
-  "touchstart",
-  (event) => {
-    touchStartX = event.changedTouches[0].clientX;
-  },
-  { passive: true }
-);
-
-swipeArea.addEventListener(
-  "touchend",
-  (event) => {
-    touchEndX = event.changedTouches[0].clientX;
-    handleSwipe();
-  },
-  { passive: true }
-);
 
 window.assetPageApi = {
   setAssetsValue,
@@ -231,4 +335,4 @@ window.assetPageApi = {
 
 createDots();
 setAssetsValue(0);
-setLevel(0);
+setLevel(0, 0);
